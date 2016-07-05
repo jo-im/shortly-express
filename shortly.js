@@ -26,15 +26,19 @@ app.use(express.static(__dirname + '/public'));
 app.get('/', 
 function(req, res) {
   res.render('index');
+  res.render('login');
+  res.end();
 });
 
 app.get('/create', 
 function(req, res) {
+  console.log('ENTERING /create FOR GET');
   res.render('index');
 });
 
 app.get('/links', 
 function(req, res) {
+  console.log('ENTERING /links FOR GET');
   Links.reset().fetch().then(function(links) {
     res.status(200).send(links.models);
   });
@@ -43,7 +47,6 @@ function(req, res) {
 app.post('/links', 
 function(req, res) {
   var uri = req.body.url;
-
   if (!util.isValidUrl(uri)) {
     console.log('Not a valid url: ', uri);
     return res.sendStatus(404);
@@ -51,11 +54,14 @@ function(req, res) {
 
   new Link({ url: uri }).fetch().then(function(found) {
     if (found) {
+      // console.log('IT IS FOUND!');
+      // console.log('FOUND ATTRIBUTE IS', found.attributes);
       res.status(200).send(found.attributes);
     } else {
+      // console.log('IT IS NOT FOUND');
       util.getUrlTitle(uri, function(err, title) {
         if (err) {
-          console.log('Error reading URL heading: ', err);
+          // console.log('Error reading URL heading: ', err);
           return res.sendStatus(404);
         }
 
@@ -75,9 +81,27 @@ function(req, res) {
 /************************************************************/
 // Write your authentication routes here
 /************************************************************/
+app.post('/signup',
+function(req, res) {
+  new User(req.body).save().then(function() {
+    res.setHeader('location', '/');
+    res.end();
+  });
+});
 
+app.post('/login', 
+function(req, res) {
+  new User(req.body).fetch().then(function(user) {
+    if (!user) {
+      res.setHeader('location', '/login');
+      res.end();
+    } else {
+      res.setHeader('location', '/');
+      res.end();
+    }
+  });
 
-
+});
 /************************************************************/
 // Handle the wildcard route last - if all other routes fail
 // assume the route is a short code and try and handle it here.
