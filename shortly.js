@@ -81,7 +81,7 @@ function(req, res) {
 // Write your authentication routes here
 /************************************************************/
 app.post('/signup',
-  function(req, res) {
+  function(req, res) {  
     //get hash
     //req.body.password = hash password
     console.log('INSIDEEEE SIGNUP POSTTTTTTTT');
@@ -90,14 +90,14 @@ app.post('/signup',
       res.redirect('/');
       res.setHeader('location', '/');
       res.end();
+    });
   });
-});
 
 app.get('/signup', 
   function(req, res) {
     res.render('signup');
     res.end();
-});
+  });
 
 app.get('/login', function(req, res) {
   res.render('login');
