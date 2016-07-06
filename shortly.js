@@ -10,6 +10,7 @@ var User = require('./app/models/user');
 var Links = require('./app/collections/links');
 var Link = require('./app/models/link');
 var Click = require('./app/models/click');
+var session = require('client-sessions');
 
 var app = express();
 
@@ -21,12 +22,57 @@ app.use(bodyParser.json());
 // Parse forms (signup/login)
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static(__dirname + '/public'));
+app.use(session({
+  cookieName: 'session',
+  secret: 'sheedoh',
+  duration: 30 * 60 * 1000,
+  activeDuration: 5 * 60 * 1000
+}));
 
-
-app.get('/', 
+app.use(function(req, res, next) {
+  if (req.session && req.session.user) {
+    new User({ username: req.session.user }).fetch().then(function(err, user) {
+      if (user) {
+        req.user = user;
+        delete req.user.password; // delete the password from the session
+        req.session.user = user;  //refresh the session value
+        res.locals.user = user;
+      } 
+      next();
+      // finishing processing the middleware and run the route
+    });
+  } else {
+    next();
+  }
+});
+var requireLogin = function(req, res, next) {
+  console.log('calling requireLogin');
+  console.log('req.user is', req.user);
+  console.log('req.session is', req.session);
+  if (!req.session.user) {
+    res.redirect('login');
+  } else {
+    //next();
+  }
+};
+app.get('/',
 function(req, res) {
-  res.render('index');
-  res.end();
+  requireLogin(req, res);
+  if (req.session && req.session.user) {
+    new User({username: req.session.user}).fetch().then(function(found) {
+      if (!found) {
+        req.session.reset();
+        res.redirect('/login');
+      } else {
+        console.log('res.locals is', res.locals);
+        res.locals.user = found;
+        res.render('index');
+        // res.end();
+      }
+    }); 
+  } else {
+    res.redirect('/login');
+  }
 });
 
 app.get('/create', 
@@ -105,9 +151,6 @@ app.get('/login', function(req, res) {
 });
 
 app.post('/login', function(req, res) {
-  //call hashing function
-  //get hashpassword
-  //req.body.password = hashpassword
   new User({username: req.body.username}).fetch().then(function(user) {
     console.log('USER ISSSSSSSSSSSS', user);
     if (!user) {
@@ -115,13 +158,22 @@ app.post('/login', function(req, res) {
       res.redirect('login');
     } else {
       if (bcrypt.compareSync(req.body.password, user.attributes.password)) {
+        console.log('ENTERING HERE');
+        req.session.user = user;
         res.setHeader('location', '/');
         res.redirect('/');
+      } else {
+        res.redirect('login');
       }
     }
     res.end();
   });
 
+});
+
+app.get('/logout', function(req, res) {
+  req.session.destroy();
+  res.redirect('/login');  
 });
 /************************************************************/
 // Handle the wildcard route last - if all other routes fail
