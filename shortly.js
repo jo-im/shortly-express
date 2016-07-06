@@ -2,7 +2,7 @@ var express = require('express');
 var util = require('./lib/utility');
 var partials = require('express-partials');
 var bodyParser = require('body-parser');
-
+var bcrypt = require('bcrypt-nodejs');
 
 var db = require('./app/config');
 var Users = require('./app/collections/users');
@@ -26,7 +26,6 @@ app.use(express.static(__dirname + '/public'));
 app.get('/', 
 function(req, res) {
   res.render('index');
-  res.render('login');
   res.end();
 });
 
@@ -82,23 +81,45 @@ function(req, res) {
 // Write your authentication routes here
 /************************************************************/
 app.post('/signup',
-function(req, res) {
-  new User(req.body).save().then(function() {
-    res.setHeader('location', '/');
-    res.end();
+  function(req, res) {
+    //get hash
+    //req.body.password = hash password
+    console.log('INSIDEEEE SIGNUP POSTTTTTTTT');
+    new User(req.body).save().then(function(user) {
+      console.log('INSIDE SIGNUP POST, USER IS', user);
+      res.redirect('/');
+      res.setHeader('location', '/');
+      res.end();
   });
 });
 
-app.post('/login', 
-function(req, res) {
-  new User(req.body).fetch().then(function(user) {
+app.get('/signup', 
+  function(req, res) {
+    res.render('signup');
+    res.end();
+});
+
+app.get('/login', function(req, res) {
+  res.render('login');
+  res.end();
+});
+
+app.post('/login', function(req, res) {
+  //call hashing function
+  //get hashpassword
+  //req.body.password = hashpassword
+  new User({username: req.body.username}).fetch().then(function(user) {
+    console.log('USER ISSSSSSSSSSSS', user);
     if (!user) {
       res.setHeader('location', '/login');
-      res.end();
+      res.redirect('login');
     } else {
-      res.setHeader('location', '/');
-      res.end();
+      if (bcrypt.compareSync(req.body.password, user.attributes.password)) {
+        res.setHeader('location', '/');
+        res.redirect('/');
+      }
     }
+    res.end();
   });
 
 });
